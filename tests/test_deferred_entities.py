@@ -129,7 +129,7 @@ def test_pi_optional_sensors_wait_for_a_reported_value():
     # Filter values from HCH5 Control 1.4.3 arrive later on older Pis.
     coordinator.publish_controller(filter_power_change_percent=-1.5, filter_hours_since_change=2,
                                    extract_rooms_temperature=23.0, extract_duct_loss_k=3.0,
-                                   extract_duct_loss_percent=23.1)
+                                   extract_duct_loss_percent=23.1, cool_boost_remaining_seconds=0)
     created = keys(batches)
     assert OPTIONAL_CONTROLLER_KEYS <= set(created)
     assert len(created) == len(set(created))

@@ -87,6 +87,8 @@ OPTIONAL_CONTROLLER_KEYS = {
     "extract_rooms_temperature",
     "extract_duct_loss_k",
     "extract_duct_loss_percent",
+    # HCH5 Control 1.5.0+: Køl.
+    "cool_boost_remaining_seconds",
 }
 
 

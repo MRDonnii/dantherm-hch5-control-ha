@@ -148,6 +148,7 @@ CONTROLLER_SENSOR_SPECS = (
     ("actual_afterheat_outdoor_lockout", "Eftervarme sommerstop", None, "mdi:weather-sunny-alert"),
     ("cooling_state", "Frikølingstilstand", None, "mdi:snowflake"),
     ("quick_boost_remaining_seconds", "Hurtig boost tilbage", UnitOfTime.SECONDS, "mdi:fan-clock"),
+    ("cool_boost_remaining_seconds", "Køl tid tilbage", UnitOfTime.SECONDS, "mdi:snowflake-alert"),
     ("bonfire_remaining_seconds", "Bål tid tilbage", UnitOfTime.SECONDS, "mdi:campfire"),
     ("standby_remaining_seconds", "Slukket tid tilbage", UnitOfTime.SECONDS, "mdi:power-sleep"),
     ("balance_running_excess_percent", "Luftbalance lige nu", PERCENTAGE, "mdi:scale-balance"),

@@ -51,9 +51,31 @@ class QuickBoostButton(ControllerEntity, ButtonEntity):
         await self.async_command({"quick_boost_minutes": self.minutes})
 
 
+COOL_BOOST_NAMES = {30: "Køl 30 min", 60: "Køl 1 time", 120: "Køl 2 timer", 0: "Stop køl"}
+
+
+class CoolBoostButton(ControllerEntity, ButtonEntity):
+    """Køl: bypass open, top step and afterheat held down for a while (HCH5 Control 1.5.0+)."""
+
+    _attr_icon = "mdi:snowflake-alert"
+
+    def __init__(self, coordinator, minutes: int) -> None:
+        super().__init__(coordinator, f"cool_boost_{minutes}", COOL_BOOST_NAMES[minutes])
+        self.minutes = minutes
+
+    @property
+    def available(self) -> bool:
+        client = getattr(self.coordinator, "controller_client", None)
+        return bool(client and client.connected)
+
+    async def async_press(self) -> None:
+        await self.async_command({"cool_boost_minutes": self.minutes})
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
     coordinator = entry.runtime_data
     entities = [PassiveLinkFilterResetButton(coordinator)]
     if coordinator.controller_client is not None:
         entities.extend(QuickBoostButton(coordinator, minutes) for minutes in (15, 30, 60, 0))
+        entities.extend(CoolBoostButton(coordinator, minutes) for minutes in (30, 60, 120, 0))
     async_add_entities(entities)
