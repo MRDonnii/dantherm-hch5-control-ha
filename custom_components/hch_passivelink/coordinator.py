@@ -3,14 +3,18 @@
 import asyncio
 import logging
 import time
+from typing import Any
 from datetime import datetime, timedelta, timezone
 
 from homeassistant.components import persistent_notification
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.util import slugify
 
 from .alarms import derive_alarm_values
 from .const import DOMAIN, PI_DIAGNOSTIC_KEYS
@@ -404,6 +408,20 @@ class PassiveLinkCoordinator(DataUpdateCoordinator[dict[str, object]]):
         self._notification_check_pending = True
         self.hass.async_create_task(self._async_maybe_notify_filter())
 
+    def _mobile_app_service(self, entity_id: str) -> str | None:
+        """The notify.mobile_app_* service behind a phone's notify entity."""
+        entry = er.async_get(self.hass).async_get(entity_id)
+        if entry is None or entry.platform != "mobile_app":
+            return None
+        names = [entity_id.split(".", 1)[1]]
+        device = dr.async_get(self.hass).async_get(entry.device_id) if entry.device_id else None
+        if device is not None:
+            names.insert(0, slugify(device.name_by_user or device.name or ""))
+        for name in names:
+            if name and self.hass.services.has_service("notify", f"mobile_app_{name}"):
+                return f"mobile_app_{name}"
+        return None
+
     async def _async_maybe_notify_filter(self) -> None:
         try:
             if not self._notify_enabled or self._filter_reset_epoch is None:
@@ -439,11 +457,24 @@ class PassiveLinkCoordinator(DataUpdateCoordinator[dict[str, object]]):
                     )
                 else:
                     domain, service = self._notify_service.split(".", 1)
+                    if domain == "notify" and not self.hass.services.has_service(domain, service):
+                        # A phone's notify entity (notify.<phone>): its mobile_app service.
+                        service = self._mobile_app_service(self._notify_service) or service
+                    service_data: dict[str, Any] = {"title": title, "message": message}
+                    if domain == "notify" and service.startswith("mobile_app_"):
+                        # The phone shows a filter icon (on iOS a communication
+                        # notification) instead of the Home Assistant icon.
+                        service_data["data"] = {
+                            "tag": "hch_passivelink_filter_change",
+                            "notification_icon": "mdi:air-filter",
+                            "notification_icon_color": "white",
+                            "color": "#0ea5e9",
+                        }
                     if self.hass.services.has_service(domain, service):
                         await self.hass.services.async_call(
                             domain,
                             service,
-                            {"title": title, "message": message},
+                            service_data,
                             blocking=False,
                         )
                     else:
