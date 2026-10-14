@@ -167,3 +167,58 @@ class PassiveSerialClient:
 
     async def stop(self) -> None:
         self._stopped = True
+
+
+class Mk2Client:
+    """Poll an HCH5 MKII over Modbus TCP and send it commands (direct, no Pi needed)."""
+
+    POLL_SECONDS = 10
+
+    def __init__(self, host: str, port: int, unit_id: int, update: Callable[[dict[str, object]], None]) -> None:
+        from . import mk2
+
+        self._mk2 = mk2
+        self.unit = mk2.Mk2Unit(mk2.ModbusTcp(host, port, unit_id))
+        self._update = update
+        self._stopped = False
+        self._wake = asyncio.Event()
+        self.connected = False
+        self.data: dict[str, object] = {}
+
+    def set_update_callback(self, update: Callable[[dict[str, object]], None]) -> None:
+        self._update = update
+
+    async def probe(self, timeout: float = 8) -> None:
+        """Identify the unit; raises when nothing answers."""
+        info = await asyncio.wait_for(asyncio.to_thread(self.unit.identify), timeout)
+        if info.device_type <= 0:
+            raise ConnectionError("Not a Dantherm unit")
+
+    async def run(self) -> None:
+        delay = self.POLL_SECONDS
+        while not self._stopped:
+            try:
+                data = await asyncio.to_thread(self.unit.snapshot)
+                self.connected, delay = True, self.POLL_SECONDS
+                self.data = {**data, "bus_traffic": True}
+            except (OSError, ValueError) as err:
+                self.connected = False
+                self.data = {**self.data, "bus_traffic": False}
+                _LOGGER.debug("MKII poll failed: %s", err)
+                delay = min(delay * 2, 60)
+            self._update(dict(self.data))
+            self._wake.clear()
+            try:
+                await asyncio.wait_for(self._wake.wait(), timeout=delay)
+            except asyncio.TimeoutError:
+                pass
+
+    async def async_command(self, method: str, *args) -> None:
+        """Run one Mk2Unit command, then read the unit again at once."""
+        await asyncio.to_thread(getattr(self.unit, method), *args)
+        self._wake.set()
+
+    async def stop(self) -> None:
+        self._stopped = True
+        self._wake.set()
+        await asyncio.to_thread(self.unit.transport.close)

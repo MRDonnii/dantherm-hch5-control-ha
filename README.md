@@ -216,6 +216,17 @@ To use the controller, open the integration's **Configure** flow after installat
 
 ## Compatibility
 
-The decoder is based on controlled observations from one HCH5 MK1 + HAC1 installation. It is not intended for HCH5 MKII or newer units that provide official Modbus TCP.
+The RS485 decoder is based on controlled observations from one HCH5 MK1 + HAC1 installation.
+
+### HCH5 MKII (beta)
+
+An HCH5 MKII speaks Modbus itself (the Dantherm Residential register map). Choose **HCH5 MKII – Modbus TCP** when adding the integration and enter the unit's address (or the HCH5 Control Pi's read-only proxy, see the Pi project's README).
+
+- Readings: temperatures T1–T5, fan speeds, step, operation mode, bypass, humidity, air quality, filter days and alarm.
+- Connected directly (no Pi controller): **Operation mode** (standby, manual, automatic, week program, away, summer, fireplace), **Fan step** 0–4, **Bypass (manual)**, **Reset filter** and **Reset alarm**.
+- With the HCH5 Control Pi: the controls come from the Pi as on an MK1.
+- MK1-only values (afterheat, HAC1, CO₂) are not created on an MKII.
+
+MKII support is tested against a simulator of the register map, not yet on a real MKII. The register map follows [Tvalley71/dantherm](https://github.com/Tvalley71/dantherm) (Apache License 2.0); see [NOTICE](NOTICE).
 
 Dantherm Group has not supplied this integration and provides no support or warranty for it.

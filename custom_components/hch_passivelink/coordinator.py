@@ -56,6 +56,7 @@ class PassiveLinkCoordinator(DataUpdateCoordinator[dict[str, object]]):
         super().__init__(hass, logger=__import__("logging").getLogger(__name__), name="Dantherm HCH5 Control")
         self.data = {}
         self.client = client
+        self.mk2_info = None
         self.task = None
         self._filter_store = Store(
             hass, STORE_VERSION, f"hch_passivelink.{entry_id}.filter_state"
@@ -321,7 +322,9 @@ class PassiveLinkCoordinator(DataUpdateCoordinator[dict[str, object]]):
                 merged[key] = self.data[key]
         if self._night_mode is not None:
             merged.setdefault("night_mode", self._night_mode)
-        if self._filter_reset_epoch is not None and self._filter_interval_days is not None:
+        if merged.get("unit_generation") == "mk2":
+            pass  # the MKII counts its own filter time; never overwrite it with the local timer
+        elif self._filter_reset_epoch is not None and self._filter_interval_days is not None:
             merged.update(filter_values(self._filter_reset_epoch, self._filter_interval_days))
             self._apply_unit_filter(merged)
         self._apply_co2_calibration(merged)
@@ -383,6 +386,8 @@ class PassiveLinkCoordinator(DataUpdateCoordinator[dict[str, object]]):
 
     async def _async_update_filter_clock(self, _now) -> None:
         if self._filter_reset_epoch is None or self._filter_interval_days is None:
+            return
+        if self.data.get("unit_generation") == "mk2":
             return
         merged = dict(self.data)
         merged.update(filter_values(self._filter_reset_epoch, self._filter_interval_days))

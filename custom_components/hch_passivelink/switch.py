@@ -8,6 +8,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 
 from .controller_entity import ControllerEntity
+from .mk2_entities import Mk2BypassSwitch, is_direct_mk2
 
 
 class FireplaceSwitch(ControllerEntity, SwitchEntity):
@@ -154,6 +155,8 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     coordinator = entry.runtime_data
+    if is_direct_mk2(coordinator):
+        async_add_entities([Mk2BypassSwitch(coordinator)])
     if coordinator.controller_client is not None:
         # The fireplace switch is retired: the Pejsetid select (Fra/15/30 min) is
         # the canonical control, so only the cooling switch is set up here.

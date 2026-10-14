@@ -4,13 +4,18 @@
     "step": {
       "user": {"title": "Vælg passiv RS485-forbindelse", "description": "Vælg en transparent RS485-over-TCP-adapter eller en USB-RS485-adapter direkte i Home Assistant-maskinen. Begge tilstande er read-only.", "data": {"connection_type": "Forbindelsestype"}},
       "tcp": {"title": "Forbind via RS485 over TCP", "description": "Indtast adressen på adapterens rå TCP-strøm. Integrationen sender aldrig forespørgsler eller kommandoer.", "data": {"host": "Værtsnavn eller IP-adresse", "port": "TCP-port"}},
+      "mk2": {"title": "HCH5 MKII over Modbus TCP", "description": "Forbind direkte til et HCH5 MKII (Dantherm Residential Modbus). Du får målinger og styring af driftstilstand, ventilationstrin, bypass, filter og alarmer – uden Raspberry Pi.", "data": {"host": "IP-adresse", "port": "Port", "unit_id": "Modbus-adresse"}},
       "serial": {"title": "Forbind via USB-RS485", "description": "Angiv den stabile enhedssti, helst /dev/serial/by-id/.... Porten åbnes read-only i 19200 8E1, og integrationen kalder aldrig write().", "data": {"serial_port": "Seriel enhedssti"}}
     },
     "error": {"cannot_connect": "Der blev oprettet forbindelse, men ingen gyldig Dantherm RTU-trafik blev modtaget."},
     "abort": {"already_configured": "Denne gateway er allerede konfigureret."}
   },
   "entity": {
+    "select": {"mk2_operation": {"name": "Driftstilstand", "state": {"standby": "Standby", "manual": "Manuel", "automatic": "Automatik", "week_program": "Ugeprogram", "away": "Ferie", "summer": "Sommer", "fireplace": "Pejs"}}, "mk2_fan_level": {"name": "Ventilationstrin"}},
+    "switch": {"mk2_bypass": {"name": "Bypass (manuel)"}},
     "sensor": {
+      "mk2_alarm": {"name": "Alarm", "state": {"none": "Ingen", "exhaust_air_fan": "Udsugningsventilator", "supply_air_fan": "Indblæsningsventilator", "bypass_damper": "Bypass-spjæld", "outdoor_air_sensor": "Udeluftføler (T1)", "supply_air_sensor": "Indblæsningsføler (T2)", "extract_air_sensor": "Udsugningsføler (T3)", "exhaust_air_sensor": "Afkastføler (T4)", "room_air_sensor": "Rumføler (T5)", "humidity_sensor": "Fugtføler", "outdoor_temperature": "Udetemperatur", "supply_temperature": "Indblæsningstemperatur", "overtemperature": "Overtemperatur", "communication_error": "Kommunikationsfejl", "fire": "Brand", "high_water_level": "Høj vandstand", "fire_protection": "Brandbeskyttelse"}},
+      "operating_hours": {"name": "Driftstimer"},
       "outdoor_temperature": {"name": "Udelufttemperatur"},
       "supply_temperature": {"name": "Indblæsningstemperatur"},
       "extract_temperature": {"name": "Udsugningstemperatur"},
@@ -96,7 +101,7 @@
       "pi_soft_temp_limit_now": {"name": "Blød temperaturgrænse"},
       "pi_soft_temp_limit_occurred": {"name": "Blød temperaturgrænse siden opstart"}
     },
-    "button": {"filter_reset": {"name": "Nulstil filterinterval"}}
+    "button": {"filter_reset": {"name": "Nulstil filterinterval"}, "mk2_alarm_reset": {"name": "Nulstil alarm"}}
   },
   "options": {
     "step": {
@@ -200,6 +205,7 @@
       "remove_room": {"title": "Fjern Smart Auto-rum", "description": "Fjerner kun rummet fra Dantherm Smart Auto. Den valgte Home Assistant-sensor slettes ikke.", "data": {"room": "Rum"}},
       "finish_rooms": {"title": "Gem Smart Auto-rum"},
       "tcp": {"title": "RS485 over TCP", "description": "Indtast IP-adressen og TCP-porten på Raspberry Pi-gatewayen eller RS485-til-Ethernet-adapteren.", "data": {"host": "IP-adresse eller værtsnavn", "port": "TCP-port"}},
+      "mk2": {"title": "HCH5 MKII over Modbus TCP", "description": "Forbind direkte til et HCH5 MKII (Dantherm Residential Modbus). Du får målinger og styring af driftstilstand, ventilationstrin, bypass, filter og alarmer – uden Raspberry Pi.", "data": {"host": "IP-adresse", "port": "Port", "unit_id": "Modbus-adresse"}},
       "serial": {"title": "Lokal USB-RS485-adapter", "description": "Angiv USB-adapterens stabile enhedssti, helst /dev/serial/by-id/....", "data": {"serial_port": "Seriel enhedssti"}}
     },
     "error": {

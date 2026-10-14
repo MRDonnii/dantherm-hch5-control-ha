@@ -8,6 +8,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .controller_entity import ControllerEntity
 from .entity import PI_KEYS, PREHEATER_KEYS, PassiveLinkEntity, async_add_entities_when_ready
+from .mk2_entities import drop_mk1_only
 
 DESCRIPTIONS = (
     BinarySensorEntityDescription(key="bypass_active", translation_key="bypass_active", device_class=BinarySensorDeviceClass.OPENING),
@@ -81,6 +82,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         if description.key not in PREHEATER_KEYS | PI_KEYS
         or coordinator._auxiliary_client is not None
     ]
+    entities = drop_mk1_only(coordinator, entities)
     if coordinator.controller_client is not None:
         entities.extend(
             ControllerStatusBinarySensor(coordinator, key, name, device_class, category, icon)

@@ -25,6 +25,7 @@ from homeassistant.helpers.restore_state import RestoreEntity
 from .controller_entity import ControllerEntity
 from .coordinator import PassiveLinkCoordinator
 from .entity import PI_KEYS, PREHEATER_KEYS, PassiveLinkEntity, async_add_entities_when_ready
+from .mk2_entities import Mk2AlarmSensor, Mk2OperatingHoursSensor, drop_mk1_only, is_mk2
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -331,6 +332,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         if description.key not in PREHEATER_KEYS | PI_KEYS
         or coordinator._auxiliary_client is not None
     ]
+    entities = drop_mk1_only(coordinator, entities)
+    if is_mk2(coordinator):
+        entities.extend([Mk2AlarmSensor(coordinator), Mk2OperatingHoursSensor(coordinator)])
     if coordinator.controller_client is not None:
         entities.extend(
             ControllerStatusSensor(coordinator, key, name, unit, icon)

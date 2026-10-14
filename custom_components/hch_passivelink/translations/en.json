@@ -4,13 +4,18 @@
     "step": {
       "user": {"title": "Choose the passive RS485 connection", "description": "Choose a transparent RS485-over-TCP adapter or a USB-RS485 adapter connected directly to the Home Assistant host. Both modes are read-only.", "data": {"connection_type": "Connection type"}},
       "tcp": {"title": "Connect using RS485 over TCP", "description": "Enter the address of the adapter's raw TCP stream. The integration never sends requests or commands.", "data": {"host": "Host or IP address", "port": "TCP port"}},
+      "mk2": {"title": "HCH5 MKII over Modbus TCP", "description": "Connect directly to an HCH5 MKII (Dantherm Residential Modbus). You get readings and control of operation mode, fan step, bypass, filter and alarms – no Raspberry Pi needed.", "data": {"host": "IP address", "port": "Port", "unit_id": "Modbus address"}},
       "serial": {"title": "Connect using USB-RS485", "description": "Enter the stable device path, preferably /dev/serial/by-id/.... The port is opened read-only at 19200 8E1 and the integration never calls write().", "data": {"serial_port": "Serial device path"}}
     },
     "error": {"cannot_connect": "Connected, but no valid Dantherm RTU traffic was received."},
     "abort": {"already_configured": "This gateway is already configured."}
   },
   "entity": {
+    "select": {"mk2_operation": {"name": "Operation mode", "state": {"standby": "Standby", "manual": "Manual", "automatic": "Automatic", "week_program": "Week program", "away": "Away", "summer": "Summer", "fireplace": "Fireplace"}}, "mk2_fan_level": {"name": "Fan step"}},
+    "switch": {"mk2_bypass": {"name": "Bypass (manual)"}},
     "sensor": {
+      "mk2_alarm": {"name": "Alarm", "state": {"none": "None", "exhaust_air_fan": "Exhaust air fan", "supply_air_fan": "Supply air fan", "bypass_damper": "Bypass damper", "outdoor_air_sensor": "Outdoor air sensor (T1)", "supply_air_sensor": "Supply air sensor (T2)", "extract_air_sensor": "Extract air sensor (T3)", "exhaust_air_sensor": "Exhaust air sensor (T4)", "room_air_sensor": "Room sensor (T5)", "humidity_sensor": "Humidity sensor", "outdoor_temperature": "Outdoor temperature", "supply_temperature": "Supply temperature", "overtemperature": "Overtemperature", "communication_error": "Communication error", "fire": "Fire", "high_water_level": "High water level", "fire_protection": "Fire protection"}},
+      "operating_hours": {"name": "Operating hours"},
       "outdoor_temperature": {"name": "Outdoor air temperature"},
       "supply_temperature": {"name": "Supply air temperature"},
       "extract_temperature": {"name": "Extract air temperature"},
@@ -96,7 +101,7 @@
       "pi_soft_temp_limit_now": {"name": "Soft temperature limit"},
       "pi_soft_temp_limit_occurred": {"name": "Soft temperature limit since boot"}
     },
-    "button": {"filter_reset": {"name": "Reset filter interval"}}
+    "button": {"filter_reset": {"name": "Reset filter interval"}, "mk2_alarm_reset": {"name": "Reset alarm"}}
   },
   "options": {
     "step": {
@@ -200,6 +205,7 @@
       "remove_room": {"title": "Remove Smart Auto room", "description": "Only removes the room from Dantherm Smart Auto. The selected Home Assistant sensor is not deleted.", "data": {"room": "Room"}},
       "finish_rooms": {"title": "Save Smart Auto rooms"},
       "tcp": {"title": "RS485 over TCP", "description": "Enter the IP address and TCP port of the Raspberry Pi gateway or RS485-to-Ethernet adapter.", "data": {"host": "IP address or host name", "port": "TCP port"}},
+      "mk2": {"title": "HCH5 MKII over Modbus TCP", "description": "Connect directly to an HCH5 MKII (Dantherm Residential Modbus). You get readings and control of operation mode, fan step, bypass, filter and alarms – no Raspberry Pi needed.", "data": {"host": "IP address", "port": "Port", "unit_id": "Modbus address"}},
       "serial": {"title": "Local USB-RS485 adapter", "description": "Enter the stable device path of the USB adapter, preferably /dev/serial/by-id/....", "data": {"serial_port": "Serial device path"}}
     },
     "error": {

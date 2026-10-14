@@ -8,6 +8,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .entity import PassiveLinkEntity
 from .controller_entity import ControllerEntity
+from .mk2_entities import Mk2AlarmResetButton, Mk2FilterResetButton, is_direct_mk2
 
 DESCRIPTION = ButtonEntityDescription(
     key="filter_reset",
@@ -74,7 +75,10 @@ class CoolBoostButton(ControllerEntity, ButtonEntity):
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
     coordinator = entry.runtime_data
-    entities = [PassiveLinkFilterResetButton(coordinator)]
+    if is_direct_mk2(coordinator):
+        entities = [Mk2FilterResetButton(coordinator), Mk2AlarmResetButton(coordinator)]
+    else:
+        entities = [PassiveLinkFilterResetButton(coordinator)]
     if coordinator.controller_client is not None:
         entities.extend(QuickBoostButton(coordinator, minutes) for minutes in (15, 30, 60, 0))
         entities.extend(CoolBoostButton(coordinator, minutes) for minutes in (30, 60, 120, 0))

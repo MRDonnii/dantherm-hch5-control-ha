@@ -7,6 +7,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .controller_entity import ControllerEntity
+from .mk2_entities import Mk2LevelSelect, Mk2OperationSelect, is_direct_mk2
 
 
 class ControllerSelect(ControllerEntity, SelectEntity):
@@ -155,6 +156,8 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     coordinator = entry.runtime_data
+    if is_direct_mk2(coordinator):
+        async_add_entities([Mk2OperationSelect(coordinator), Mk2LevelSelect(coordinator)])
     if coordinator.controller_client is None:
         return
     async_add_entities([

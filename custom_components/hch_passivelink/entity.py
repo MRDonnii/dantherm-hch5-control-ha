@@ -140,11 +140,12 @@ class PassiveLinkEntity(CoordinatorEntity[PassiveLinkCoordinator]):
                 **parent_link(coordinator),
             )
         else:
+            mk2_info = getattr(coordinator, "mk2_info", None)
             self._attr_device_info = DeviceInfo(
                 identifiers={(DOMAIN, "hch5_mk1_hac1")},
                 name="Dantherm HCH5 Control",
                 manufacturer="Dantherm",
-                model="HCH5 MK1 + HAC1",
+                model=mk2_info.model if mk2_info else "HCH5 MK1 + HAC1",
             )
 
     @property

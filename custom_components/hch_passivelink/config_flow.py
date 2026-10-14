@@ -11,7 +11,7 @@ from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import selector
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .client import PassiveLinkClient, PassiveSerialClient
+from .client import Mk2Client, PassiveLinkClient, PassiveSerialClient
 from .controller_api import ControllerApiClient
 from .sensor_support import (
     KIND_CO2,
@@ -26,7 +26,10 @@ from .sensor_support import (
 from .const import (
     CONF_CONNECTION_TYPE,
     CONF_SERIAL_PORT,
+    CONNECTION_MK2,
     CONNECTION_SERIAL,
+    CONF_UNIT_ID,
+    DEFAULT_MK2_PORT,
     CONNECTION_TCP,
     CONF_FILTER_NOTIFY_DAYS,
     CONF_FILTER_NOTIFY_ENABLED,
@@ -86,14 +89,46 @@ class PassiveLinkConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             if user_input[CONF_CONNECTION_TYPE] == CONNECTION_SERIAL:
                 return await self.async_step_serial()
+            if user_input[CONF_CONNECTION_TYPE] == CONNECTION_MK2:
+                return await self.async_step_mk2()
             return await self.async_step_tcp()
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema({
                 vol.Required(CONF_CONNECTION_TYPE, default=CONNECTION_TCP): vol.In(
-                    {CONNECTION_TCP: "RS485 over TCP", CONNECTION_SERIAL: "USB-RS485"}
+                    {CONNECTION_TCP: "RS485 over TCP", CONNECTION_SERIAL: "USB-RS485", CONNECTION_MK2: "HCH5 MKII – Modbus TCP"}
                 )
             }),
+        )
+
+    async def async_step_mk2(self, user_input: dict | None = None) -> FlowResult:
+        """HCH5 MKII directly over Modbus TCP – readings and controls without the Pi."""
+        errors = {}
+        if user_input is not None:
+            host, port = user_input[CONF_HOST].strip(), int(user_input[CONF_PORT])
+            unit_id = int(user_input.get(CONF_UNIT_ID, 1))
+            client = Mk2Client(host, port, unit_id, lambda _: None)
+            try:
+                await client.probe()
+            except (OSError, ConnectionError, ValueError, asyncio.TimeoutError):
+                errors["base"] = "cannot_connect"
+            else:
+                await self.async_set_unique_id(f"mk2:{host}:{port}:{unit_id}")
+                self._abort_if_unique_id_configured()
+                return self.async_create_entry(
+                    title=f"{DEFAULT_NAME} ({client.unit.info.model})",
+                    data={CONF_CONNECTION_TYPE: CONNECTION_MK2, CONF_HOST: host, CONF_PORT: port, CONF_UNIT_ID: unit_id},
+                )
+            finally:
+                await client.stop()
+        return self.async_show_form(
+            step_id="mk2",
+            data_schema=vol.Schema({
+                vol.Required(CONF_HOST): str,
+                vol.Required(CONF_PORT, default=DEFAULT_MK2_PORT): vol.All(vol.Coerce(int), vol.Range(min=1, max=65535)),
+                vol.Required(CONF_UNIT_ID, default=1): vol.All(vol.Coerce(int), vol.Range(min=1, max=247)),
+            }),
+            errors=errors,
         )
 
     async def async_step_tcp(self, user_input: dict | None = None) -> FlowResult:
@@ -311,11 +346,20 @@ class PassiveLinkOptionsFlow(config_entries.OptionsFlow):
                     errors[CONF_HOST] = "required"
                 else:
                     try:
-                        await PassiveLinkClient(host, port, lambda _: None).probe()
-                    except (OSError, ConnectionError, asyncio.TimeoutError):
+                        if connection_type == CONNECTION_MK2:
+                            probe_client = Mk2Client(host, port, int(current.get(CONF_UNIT_ID, 1)), lambda _: None)
+                            try:
+                                await probe_client.probe()
+                            finally:
+                                await probe_client.stop()
+                        else:
+                            await PassiveLinkClient(host, port, lambda _: None).probe()
+                    except (OSError, ConnectionError, ValueError, asyncio.TimeoutError):
                         errors["base"] = "cannot_connect"
                     options[CONF_HOST] = host
                     options[CONF_PORT] = port
+                    if connection_type == CONNECTION_MK2:
+                        options[CONF_UNIT_ID] = int(current.get(CONF_UNIT_ID, 1))
             if not errors:
                 self._pending = options
                 # Chosen on the separate sensor page; keep them unless changed there.
@@ -333,7 +377,7 @@ class PassiveLinkOptionsFlow(config_entries.OptionsFlow):
             vol.Required(
                 CONF_CONNECTION_TYPE,
                 default=current.get(CONF_CONNECTION_TYPE, CONNECTION_TCP),
-            ): vol.In({CONNECTION_TCP: "RS485 over TCP", CONNECTION_SERIAL: "USB-RS485"}),
+            ): vol.In({CONNECTION_TCP: "RS485 over TCP", CONNECTION_SERIAL: "USB-RS485", CONNECTION_MK2: "HCH5 MKII – Modbus TCP"}),
             vol.Optional(CONF_HOST, default=current.get(CONF_HOST, "")): str,
             vol.Required(CONF_PORT, default=current.get(CONF_PORT, DEFAULT_PORT)): vol.All(
                 vol.Coerce(int), vol.Range(min=1, max=65535)

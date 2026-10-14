@@ -3,12 +3,13 @@
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import issue_registry as ir
 
-from .client import PassiveLinkClient, PassiveSerialClient
+from .client import Mk2Client, PassiveLinkClient, PassiveSerialClient
 from .controller_api import ControllerApiClient
 from .const import (
     CONF_CONNECTION_TYPE,
@@ -47,8 +48,11 @@ from .const import (
     room_temperature_key,
     room_humidity_key,
     room_co2_key,
+    CONNECTION_MK2,
     CONNECTION_SERIAL,
     CONNECTION_TCP,
+    CONF_UNIT_ID,
+    DEFAULT_MK2_PORT,
     DEFAULT_NAME,
     DOMAIN,
 )
@@ -140,9 +144,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: PassiveLinkConfigEntry) 
         hass.config_entries.async_update_entry(entry, title="Dantherm HCH5 Control")
     config = {**entry.data, **entry.options}
     connection_type = config.get(CONF_CONNECTION_TYPE, CONNECTION_TCP)
+    mk2_info = None
     if connection_type == CONNECTION_SERIAL:
         client = PassiveSerialClient(config[CONF_SERIAL_PORT], lambda _: None)
         task_name = "Dantherm HCH5 Control USB-RS485"
+    elif connection_type == CONNECTION_MK2:
+        client = Mk2Client(
+            config[CONF_HOST], int(config.get(CONF_PORT, DEFAULT_MK2_PORT)), int(config.get(CONF_UNIT_ID, 1)), lambda _: None
+        )
+        task_name = "Dantherm HCH5 MKII Modbus TCP"
+        try:
+            await client.probe()
+            mk2_info = client.unit.info
+        except (OSError, ValueError, TimeoutError) as err:
+            raise ConfigEntryNotReady(f"HCH5 MKII does not answer: {err}") from err
     else:
         client = PassiveLinkClient(config[CONF_HOST], config[CONF_PORT], lambda _: None)
         task_name = "Dantherm HCH5 Control TCP"
@@ -199,12 +214,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: PassiveLinkConfigEntry) 
     await coordinator.async_load_filter_state()
     client.set_update_callback(coordinator.async_handle_update)
     # Register the main device first so sub-devices can link to its id.
+    coordinator.mk2_info = mk2_info
     coordinator.main_device_id = dr.async_get(hass).async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, "hch5_mk1_hac1")},
         name=DEFAULT_NAME,
         manufacturer="Dantherm",
-        model="HCH5 MK1 + HAC1",
+        model=mk2_info.model if mk2_info else "HCH5 MK1 + HAC1",
+        sw_version=mk2_info.firmware if mk2_info else None,
     ).id
     entry.runtime_data = coordinator
     coordinator.task = entry.async_create_background_task(hass, client.run(), task_name)
